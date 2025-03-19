@@ -1,0 +1,657 @@
+## Plik zawiera kod źródłowy dla wszystkich wygenerowanych w Pythonie wykresów na bazie danych ze zbioru danych przykładowych, których generowanie omówiono w pliku 'https://github.com/Mkopczynski55/PracaInzynierska/blob/main/TeoriaDane'. ""
+
+# DEKLARACJA FOLDERU ZAPISU - przy kopiowaniu należy wskazać własne ścieżki
+folder = "Praca inżynierska Charts"
+os.makedirs(folder, exist_ok=True)
+
+# Rysunek 3.4.
+
+df_kopia = df[['Powierzchnia', 'Cena']].copy()
+df_kopia = df_kopia[(df_kopia['Cena'] < 2_000_000) & (df_kopia['Powierzchnia'] < 200)]
+df_kopia = df_kopia.sample(n=100, random_state=42)
+X = df_kopia[['Powierzchnia', 'Cena']].values
+
+# Klasteryzacja
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+clusters = kmeans.fit_predict(X)
+
+# Wskazujemy kolory segementów
+custom_colors = ["#3F7B5D", "#79BDA8", "#B7DFD3"]
+
+# Tworzenie dwóch wykresów obok siebie
+fig, axs = plt.subplots(ncols=2, figsize=(16, 6))
+
+# Wykres 1 – Klasteryzacja (lewy)
+for i, color in enumerate(custom_colors):
+    cluster_points = X[clusters == i]
+    axs[0].scatter(cluster_points[:, 0], cluster_points[:, 1], color=color, label=f'Segment {i}', s=40, alpha=0.8)
+
+axs[0].set_title("Klasteryzacja: Powierzchnia vs Cena", fontsize=14)
+axs[0].set_xlabel("Powierzchnia (m²)", fontsize=12)
+axs[0].set_ylabel("Cena", fontsize=12)
+axs[0].grid(True)
+axs[0].legend(title="Segmenty")
+axs[0].yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+
+# Wykres 2 – Słupkowy (prawy)
+unique, counts = np.unique(clusters, return_counts=True)
+for i, count in zip(unique, counts):
+    axs[1].bar(i, count, color=custom_colors[i])
+
+axs[1].set_title("Liczba nieruchomości w segmentach", fontsize=14)
+axs[1].set_xlabel("Segment", fontsize=12)
+axs[1].set_ylabel("Liczba nieruchomości", fontsize=12)
+axs[1].set_xticks(unique)
+axs[1].grid(axis='y')
+
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_4_Klasteryzacja.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.7.
+
+def compute_r2(x, y):
+    # Dopasowanie modelu liniowego: y = a*x + b
+    a, b = np.polyfit(x, y, 1)
+    y_pred = a * x + b
+    sse = np.sum((y - y_pred) ** 2)
+    sst = np.sum((y - np.mean(y)) ** 2)
+    r2 = 1 - sse / sst
+    return r2, a, b
+
+np.random.seed(42) # TU UWAGA - w tym wykresie jest inny seed, dane tutaj są niezależnie generowane
+n_points = 50  # punkty na każdy CASE
+
+# CASE 1: Dane bez ogólnego trendu – kilka skupisk
+
+mean1 = [2, 8]
+cov1 = [[0.5, 0], [0, 0.5]]
+cluster1 = np.random.multivariate_normal(mean1, cov1, n_points)
+
+mean2 = [5, 2]
+cov2 = [[0.5, 0], [0, 0.5]]
+cluster2 = np.random.multivariate_normal(mean2, cov2, n_points)
+
+mean3 = [8, 7]
+cov3 = [[0.5, 0], [0, 0.5]]
+cluster3 = np.random.multivariate_normal(mean3, cov3, n_points)
+
+# Łączneie wszystkich punktów z trzech klastrów
+
+x1 = np.concatenate([cluster1[:, 0], cluster2[:, 0], cluster3[:, 0]])
+y1 = np.concatenate([cluster1[:, 1], cluster2[:, 1], cluster3[:, 1]])
+r2_1, a1, b1 = compute_r2(x1, y1)
+
+# CASE 2: Słaba zależność - duży jitter
+
+x2 = np.random.uniform(0, 10, n_points)
+noise2 = np.random.normal(0, 5, n_points)
+y2 = 2 * x2 + noise2
+r2_2, a2, b2 = compute_r2(x2, y2)
+
+# CASE 3: Umiarkowana zależność z zakłóceniami - mniejszy szum
+
+x3 = np.random.uniform(0, 10, n_points)
+noise3 = np.random.normal(0, 2, n_points)
+y3 = 2 * x3 + noise3
+r2_3, a3, b3 = compute_r2(x3, y3)
+
+# CASE 4: Silna liniowa zależność
+
+x4 = np.random.uniform(0, 10, n_points)
+noise4 = np.random.normal(0, 0.5, n_points)
+y4 = 2 * x4 + noise4
+r2_4, a4, b4 = compute_r2(x4, y4)
+
+# Wspólna skala dla wykesów
+
+x_limits = (0, 10)
+y_limits = (0, 25)
+
+colors = ["#3F7B5D", "#79BDA8", "#B7DFD3", "#00884B"]
+
+# 4 wykresy obok siebie
+
+fig, axes = plt.subplots(1, 4, figsize=(20, 5), sharex=True, sharey=True)
+
+# CASE 1: Dane bez ogólnego trendu – kilka skupisk
+
+axes[0].scatter(cluster1[:, 0], cluster1[:, 1], color=colors[0], s=40, alpha=0.8, label="Klaster 1")
+axes[0].scatter(cluster2[:, 0], cluster2[:, 1], color=colors[1], s=40, alpha=0.8, label="Klaster 2")
+axes[0].scatter(cluster3[:, 0], cluster3[:, 1], color=colors[2], s=40, alpha=0.8, label="Klaster 3")
+axes[0].set_title(f"R\u00b2 = {r2_1:.2f}")
+axes[0].set_xlabel("X")
+axes[0].set_ylabel("Y")
+axes[0].set_xlim(x_limits)
+axes[0].set_ylim(y_limits)
+axes[0].grid(True)
+# axes[0].legend()
+
+# CASE 2: Słaba zależność z dużym szumem
+
+axes[1].scatter(x2, y2, color=colors[1], s=40, alpha=0.8)
+axes[1].set_title(f"R\u00b2 = {r2_2:.2f}")
+axes[1].set_xlabel("X")
+axes[1].set_xlim(x_limits)
+axes[1].set_ylim(y_limits)
+axes[1].grid(True)
+
+# CASE 3: Umiarkowana zależność z zakłóceniami
+
+axes[2].scatter(x3, y3, color=colors[2], s=40, alpha=0.8)
+axes[2].set_title(f"R\u00b2 = {r2_3:.2f}")
+axes[2].set_xlabel("X")
+axes[2].set_xlim(x_limits)
+axes[2].set_ylim(y_limits)
+axes[2].grid(True)
+
+# CASE 4: Silna liniowa zależność (idealne dane do regresji)
+
+axes[3].scatter(x4, y4, color=colors[3], s=40, alpha=0.8)
+axes[3].set_title(f"R\u00b2 = {r2_4:.2f}")
+axes[3].set_xlabel("X")
+axes[3].set_xlim(x_limits)
+axes[3].set_ylim(y_limits)
+axes[3].grid(True)
+
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_7_JakoscDopasowaniaLiniowe.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.8.
+
+def compute_r2_nonlinear(x, y, deg=2):
+    # Dopasowanie modelu kwadratowego: y = a*x^2 + b*x + c
+    coeffs = np.polyfit(x, y, deg)
+    poly = np.poly1d(coeffs)
+    y_pred = poly(x)
+    sse = np.sum((y - y_pred)**2)
+    sst = np.sum((y - np.mean(y))**2)
+    r2 = 1 - sse/sst
+    return r2
+
+np.random.seed(42) # TU UWAGA - w tym wykresie jest inny seed, dane tutaj są niezależnie generowane
+n_points = 50  # liczba punktów dla każdej sytuacji
+
+# Ujednolicone skale: X od 0 do 10, Y od 0 do 100
+x_limits = (0, 10)
+y_limits = (0, 100)
+
+# Definicja palety kolorów (użyte wcześniej odcienie zieleni)
+colors = ["#3F7B5D", "#79BDA8", "#B7DFD3", "#00884B"]
+
+# CASE 1: Dane podzielone na kilka skupisk – brak jednolitego nieliniowego trendu
+# Zmodyfikowane centra i macierze kowariancji -  aby punkty nie skupiały się wokół małych wartości:
+
+mean1 = [2, 80]    # skupisko 1 przesunięte do wyższych wartości Y
+cov1 = [[1, 0], [0, 10]]
+cluster1 = np.random.multivariate_normal(mean1, cov1, n_points)
+
+mean2 = [5, 40]    # skupisko 2 – inny układ
+cov2 = [[1, 0], [0, 10]]
+cluster2 = np.random.multivariate_normal(mean2, cov2, n_points)
+
+mean3 = [8, 70]    # skupisko 3 – kolejne, nie wyrównane do jednej linii
+cov3 = [[1, 0], [0, 10]]
+cluster3 = np.random.multivariate_normal(mean3, cov3, n_points)
+
+x1 = np.concatenate([cluster1[:, 0], cluster2[:, 0], cluster3[:, 0]])
+y1 = np.concatenate([cluster1[:, 1], cluster2[:, 1], cluster3[:, 1]])
+r2_1 = compute_r2_nonlinear(x1, y1, deg=2)
+
+# CASE 2: Słaba nieliniowa zależność z dużym szumem
+# Funkcja kwadratowa: y = 5*(x-5)^2 + 10
+
+x2 = np.random.uniform(0, 10, n_points)
+noise2 = np.random.normal(0, 20, n_points)
+y2 = 5 * (x2 - 5)**2 + 10 + noise2
+r2_2 = compute_r2_nonlinear(x2, y2, deg=2)
+
+# CASE 3: Umiarkowana nieliniowa zależność z mniejszym szumem
+
+# Ta sama funkcja, ale z mniejszym szumem (std = 5)
+x3 = np.random.uniform(0, 10, n_points)
+noise3 = np.random.normal(0, 5, n_points)
+y3 = 5 * (x3 - 5)**2 + 10 + noise3
+r2_3 = compute_r2_nonlinear(x3, y3, deg=2)
+
+# CASE 4: Idealna nieliniowa zależność – silny, czysty trend kwadratowy z minimalnym szumem (std = 1)
+
+x4 = np.random.uniform(0, 10, n_points)
+noise4 = np.random.normal(0, 1, n_points)
+y4 = 5 * (x4 - 5)**2 + 10 + noise4
+r2_4 = compute_r2_nonlinear(x4, y4, deg=2)
+
+fig, axes = plt.subplots(1, 4, figsize=(20, 5), sharex=True, sharey=True)
+
+# CASE 1: Kilka skupisk, brak jednolitego trendu nieliniowego
+
+axes[0].scatter(x1, y1, color=colors[0], s=40, alpha=0.8)
+axes[0].set_title(f"R\u00b2 = {r2_1:.2f}")
+axes[0].set_xlabel("X")
+axes[0].set_ylabel("Y")
+axes[0].set_xlim(x_limits)
+axes[0].set_ylim(y_limits)
+axes[0].grid(True)
+
+# CASE 2: Słaba nieliniowa zależność (spory szum)
+
+axes[1].scatter(x2, y2, color=colors[1], s=40, alpha=0.8)
+axes[1].set_title(f"R\u00b2 = {r2_2:.2f}")
+axes[1].set_xlabel("X")
+axes[1].set_xlim(x_limits)
+axes[1].set_ylim(y_limits)
+axes[1].grid(True)
+
+# CASE 3: Umiarkowana nieliniowa zależność (mniejszy szum niż w Case2)
+
+axes[2].scatter(x3, y3, color=colors[2], s=40, alpha=0.8)
+axes[2].set_title(f"R\u00b2 = {r2_3:.2f}")
+axes[2].set_xlabel("X")
+axes[2].set_xlim(x_limits)
+axes[2].set_ylim(y_limits)
+axes[2].grid(True)
+
+# CASE 4: Idealna nieliniowa zależność
+
+axes[3].scatter(x4, y4, color=colors[3], s=40, alpha=0.8)
+axes[3].set_title(f"R\u00b2 = {r2_4:.2f}")
+axes[3].set_xlabel("X")
+axes[3].set_xlim(x_limits)
+axes[3].set_ylim(y_limits)
+axes[3].grid(True)
+
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_8_JakoscDopasowaniaWielomianowe.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.9.
+
+def compute_r2(y, y_pred):
+    sse = np.sum((y - y_pred)**2)
+    sst = np.sum((y - np.mean(y))**2)
+    return 1 - sse/sst
+
+# Funckje potrzebne do stworzenia modeli nieliniowych
+def exp_model(x, a, b, c):
+    return a * np.exp(b * x) + c
+
+def log_model(x, a, b, c):
+    return a * np.log(x + b) + c
+
+def sin_model(x, a, b, c, d):
+    return a * np.sin(b * x + c) + d
+
+def power_model(x, a, b, c):
+    return a * np.power(x, b) + c
+
+np.random.seed(42)
+n_points = 50
+
+# CASE 1: Wykładnicza
+
+x1 = np.linspace(0, 10, n_points)
+noise1 = np.random.normal(0, 2, n_points)
+y1 = 2 * np.exp(0.15 * x1) + 5 + noise1
+params1, _ = curve_fit(exp_model, x1, y1, p0=[2, 0.15, 5])
+y1_fit = exp_model(x1, *params1)
+r2_1 = compute_r2(y1, y1_fit)
+
+# CASE 2: Logarytmiczna
+
+x2 = np.linspace(1, 10, n_points)  # od 1, by log(x+b) był dobrze określony
+noise2 = np.random.normal(0, 2, n_points)
+y2 = 10 * np.log(x2 + 1) + 3 + noise2
+params2, _ = curve_fit(log_model, x2, y2, p0=[10, 1, 3])
+y2_fit = log_model(x2, *params2)
+r2_2 = compute_r2(y2, y2_fit)
+
+# CASE3: Sinusoidalna
+x3 = np.linspace(0, 10, n_points)
+noise3 = np.random.normal(0, 1, n_points)
+y3 = 5 * np.sin(1 * x3 + 0.2) + 10 + noise3
+params3, _ = curve_fit(sin_model, x3, y3, p0=[5, 1, 0.2, 10])
+y3_fit = sin_model(x3, *params3)
+r2_3 = compute_r2(y3, y3_fit)
+
+# CASE 4: Potęgowa
+x4 = np.linspace(1, 10, n_points)
+noise4 = np.random.normal(0, 5, n_points)
+y4 = 3 * np.power(x4, 1.5) + 2 + noise4
+params4, _ = curve_fit(power_model, x4, y4, p0=[3, 1.5, 2])
+y4_fit = power_model(x4, *params4)
+r2_4 = compute_r2(y4, y4_fit)
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# CASE 1: Wykładnicza
+
+axes[0,0].scatter(x1, y1, color="#3F7B5D", s=40, alpha=0.8)
+axes[0,0].plot(x1, y1_fit, color="#000000", lw=2)
+axes[0,0].set_title(f"Exponential: R\u00b2 = {r2_1:.2f}")
+axes[0,0].set_xlabel("X")
+axes[0,0].set_ylabel("Y")
+axes[0,0].grid(True)
+
+# CASE 2: Logarytmiczna
+
+axes[0,1].scatter(x2, y2, color="#79BDA8", s=40, alpha=0.8)
+axes[0,1].plot(x2, y2_fit, color="#000000", lw=2)
+axes[0,1].set_title(f"Logarithmic: R\u00b2 = {r2_2:.2f}")
+axes[0,1].set_xlabel("X")
+axes[0,1].set_ylabel("Y")
+axes[0,1].grid(True)
+
+# CASE 3: Sinusoidalna
+
+axes[1,0].scatter(x3, y3, color="#B7DFD3", s=40, alpha=0.8)
+axes[1,0].plot(x3, y3_fit, color="#000000", lw=2)
+axes[1,0].set_title(f"Sinusoidal: R\u00b2 = {r2_3:.2f}")
+axes[1,0].set_xlabel("X")
+axes[1,0].set_ylabel("Y")
+axes[1,0].grid(True)
+
+# CASE 4: Potęgowa
+
+axes[1,1].scatter(x4, y4, color="#00884B", s=40, alpha=0.8)
+axes[1,1].plot(x4, y4_fit, color="#000000", lw=2)
+axes[1,1].set_title(f"Power: R\u00b2 = {r2_4:.2f}")
+axes[1,1].set_xlabel("X")
+axes[1,1].set_ylabel("Y")
+axes[1,1].grid(True)
+
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_9_JakoscDopasowaniaNieliniowe.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.10.
+
+# Kor. Pearsona między powierzchnią a cena
+r, p_value = stats.pearsonr(df['Powierzchnia'], df['Cena'])
+
+plt.figure(figsize=(8, 6))
+plt.scatter(df['Powierzchnia'], df['Cena'], color='#00884B', alpha=0.6, label='Dane')
+
+# Linia regresji
+slope, intercept = np.polyfit(df['Powierzchnia'], df['Cena'], 1)
+plt.plot(df['Powierzchnia'], slope * df['Powierzchnia'] + intercept, color='black', linestyle='-', label='Regresja liniowa')
+
+plt.text(0.05, 0.95, f'r = {r:.3f}', transform=plt.gca().transAxes, fontsize=12,
+         verticalalignment='top', bbox=dict(boxstyle="round", facecolor="white", edgecolor="gray"))
+
+plt.title("Zależność między Powierzchnią a Ceną")
+plt.xlabel("Powierzchnia (m²)")
+plt.ylabel("Cena")
+plt.grid(True)
+plt.legend()
+plt.gca().yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+plt.savefig(os.path.join(folder, "3_10_BadanieZaleznossciLiniowejKorelacja.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.11.
+
+# Wybieram dane z wyraźną liniową zależnością Cena ~ Powierzchnia (r > 0.9)
+
+max_corr = 0
+best_subset = None
+indices = df.index.tolist()
+
+# Przeszukuję losowe 500 kombinacji
+np.random.seed(123)
+sampled_combinations = [np.random.choice(indices, size=12, replace=False) for _ in range(500)]
+
+for combo in sampled_combinations:
+    temp_df = df.loc[combo, ['Powierzchnia', 'Cena']]
+    corr = temp_df['Powierzchnia'].corr(temp_df['Cena'])
+    if corr > max_corr:
+        max_corr = corr
+        best_subset = temp_df.copy()
+
+# Podzbiór z silną malejącą zależnością: Cena ~ Odległość od Centrum
+min_corr_odl = 0
+best_subset_odl = None
+
+# Losowe 1000 kombinacji 12-punktowych
+for combo in sampled_combinations:
+    temp_df = df.loc[combo, ['OdlOdCentrum', 'Cena']]
+    corr = temp_df['OdlOdCentrum'].corr(temp_df['Cena'])
+    if corr < min_corr_odl:
+        min_corr_odl = corr
+        best_subset_odl = temp_df.copy()
+    if min_corr_odl < -0.85:
+        break  # wystarczająco silna zależność znaleziona
+
+# Tworzenie wspólnego wykresu dla powyższych podzbiorów
+
+# Podzbiór z silną dodatnią korelacją Cena ~ Powierzchnia
+subset_rosnaca = best_subset.copy()
+
+# Podzbiór z silną ujemną korelacją Cena ~ OdlOdCentrum
+subset_malejaca = best_subset_odl.copy()
+
+# Wspólny wykres – dwa panele obok siebie
+fig, axs = plt.subplots(ncols=2, figsize=(14, 6), sharey=True)
+
+# Wykres 1: (zależność rosnąca)
+axs[0].scatter(subset_rosnaca['Powierzchnia'], subset_rosnaca['Cena'], color="#00884B", s=80)
+axs[0].set_title("Zależność rosnąca: Cena vs Powierzchnia")
+axs[0].set_xlabel("Powierzchnia (m²)")
+axs[0].set_ylabel("Cena")
+axs[0].grid(True)
+axs[0].yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+
+# Wykres 2:  (zależność malejąca)
+axs[1].scatter(subset_malejaca['OdlOdCentrum'], subset_malejaca['Cena'], color="#00884B", s=80)
+axs[1].set_title("Zależność malejąca: Cena vs Odległość od Centrum")
+axs[1].set_xlabel("Odległość od Centrum (km)")
+axs[1].grid(True)
+axs[1].yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_11_ProstaRegresjaLiniowa.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.12.
+
+# Dopasowanie modelu regresji liniowej Cena ~ Powierzchnia
+X_fit = sm.add_constant(best_subset['Powierzchnia'])
+y_fit = best_subset['Cena']
+model_fit = sm.OLS(y_fit, X_fit).fit()
+predicted = model_fit.fittedvalues
+
+plt.figure(figsize=(10,6))
+
+# Punkty rzeczywiste (zielone)
+plt.scatter(best_subset['Powierzchnia'], best_subset['Cena'], color="#00884B", s=100, label='Wartości rzeczywiste')
+
+# Punkty przewidywane (pomarańczowe)
+plt.scatter(best_subset['Powierzchnia'], predicted, color="#FF8C42", s=100, edgecolor='black', label='Wartości przewidywane')
+
+plt.plot(best_subset['Powierzchnia'], predicted, color='gray', linewidth=1)
+
+# Reszty (linie pionowe między punktami, żeby pokazać błędy - słabo widoczne, bo punkty mają dość duże znaczniki a błędy w wielu przypadkach są niezyt duże.)
+for x, y_obs, y_pred in zip(best_subset['Powierzchnia'], best_subset['Cena'], predicted):
+    plt.vlines(x, y_pred, y_obs, color='gray', linestyle='dotted')
+
+plt.xlabel("Powierzchnia (m²)")
+plt.ylabel("Cena")
+plt.grid(True)
+plt.legend()
+plt.gca().yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+plt.savefig(os.path.join(folder, "3_12_ProstaRegresjaLiniowaOLS.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.14.
+
+osm, osr = stats.probplot(residuals, dist="norm", fit=False)
+
+# Obliczenie współczynników prostej dopasowania dla Q-Q plot
+slope, intercept = np.polyfit(osm, osr, 1)
+fit_line = slope * np.array(osm) + intercept
+
+plt.figure(figsize=(8,6))
+plt.scatter(osm, osr, color="#00884B", s=60)  # zielone punkty
+plt.plot(osm, fit_line, color="black", linewidth=2)  # czarna linia
+plt.xlabel("Teoretyczne kwantyle")
+plt.ylabel("Obserwowane kwantyle reszt")
+plt.grid(True)
+plt.ticklabel_format(style='plain', axis='y')
+plt.tick_params(axis='both', labelsize=10)
+plt.savefig(os.path.join(folder, "3_14_WykresQQReszt.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.15.
+
+# diagnostyka homosekdastyczności
+fitted_vals = model_bp.fittedvalues
+residuals = model_bp.resid
+
+plt.figure(figsize=(8,6))
+plt.scatter(fitted_vals, residuals, color="#00884B", alpha=0.6, s=60)
+plt.axhline(0, color='black', linestyle='--')
+plt.xlabel("Wartości przewidywane Cena")
+plt.ylabel("Reszty")
+plt.grid(True)
+plt.gca().xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}'))
+plt.savefig(os.path.join(folder, "3_15_Homoskedastycznosc.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.16.
+
+# Cena przeliczona na MLN
+df['CenaMLN'] = df['Cena'] / 1_000_000
+y_multi_mln = df['CenaMLN']
+
+model_multi_mln = sm.OLS(y_multi_mln, X_multi_with_const).fit()
+intercept_mln, beta_pow_mln, beta_pok_mln = model_multi_mln.params
+
+# Siatka punktów
+Cena_grid_mln = intercept_mln + beta_pow_mln * Pow_grid + beta_pok_mln * Pok_grid
+
+# Wykres 3D
+fig = plt.figure(figsize=(12,8))
+ax = fig.add_subplot(111, projection='3d')
+
+ax.scatter(df['Powierzchnia'], df['LiczbaPokoi'], df['CenaMLN'], color='#00884B', s=50, label='Dane')
+
+# + Dodanie płaszczyzny
+ax.plot_surface(Pow_grid, Pok_grid, Cena_grid_mln, alpha=0.4, color='#00884B', label='Płaszczyzna regresji')
+
+ax.set_title("Regresja wieloraka: Cena ~ Powierzchnia + LiczbaPokoi", pad=20)
+ax.set_xlabel("Powierzchnia (m²)", labelpad=10)
+ax.set_ylabel("Liczba pokoi", labelpad=10)
+ax.set_zlabel("Cena (mln)", labelpad=10)
+ax.view_init(elev=25, azim=135)
+
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', label='Dane',
+           markerfacecolor='#00884B', markersize=10),
+    Line2D([0], [0], color='#00884B', lw=4, label='Płaszczyzna regresji', alpha=0.4)
+]
+ax.legend(handles=legend_elements, loc='upper left')
+plt.savefig(os.path.join(folder, "3_16_RegresjaWieloraka3D.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.19.
+
+np.random.seed(42) # UWAGA - ponownie inny seed dla tego wykresu
+
+#100 obs, 3 współczynniki
+n_samples = 100
+n_features = 3
+X = np.random.randn(n_samples, n_features)
+true_coefs = np.array([5, -3, 2])
+y = X.dot(true_coefs) + np.random.normal(0, 0.5, n_samples)
+
+# Zakres wartości lambda skala logarytmiczna
+lambdas = np.logspace(-2, 3, 100)
+coefs = []
+
+# Ridge dla różnych alpha
+for alpha in lambdas:
+    ridge = Ridge(alpha=alpha, fit_intercept=True)
+    ridge.fit(X, y)
+    coefs.append(ridge.coef_)
+
+coefs = np.array(coefs)
+custom_colors = ["#3F7B5D", "#79BDA8", "#B7DFD3"]
+plt.figure(figsize=(8, 6))
+for i in range(n_features):
+    plt.plot(lambdas, coefs[:, i], color=custom_colors[i], label=f'Współczynnik β{i+1}')
+plt.xscale('log')
+plt.xlabel('Lambda (λ)') # Lambda!
+plt.ylabel('Wartość współczynnika β')
+plt.title('Ridge Trace Plot')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_19_RidgeTracePlot.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.20.
+
+np.random.seed(42) # Ponowenie inny seed 42 jak w ridge
+
+# 100 obs, 3 zmienne
+n_samples = 100
+n_features = 3
+X = np.random.randn(n_samples, n_features)
+true_coefs = np.array([5, -3, 2])
+y = X.dot(true_coefs) + np.random.normal(0, 0.5, n_samples)
+
+# Zakres wartości lambda (α) – używamy skali logarytmicznej
+lambdas = np.logspace(-2, 1, 100)
+coefs = []
+
+# Dopasowywanie Lasso do lambdy
+for alpha in lambdas:
+    lasso = Lasso(alpha=alpha, max_iter=10000)
+    lasso.fit(X, y)
+    coefs.append(lasso.coef_)
+
+coefs = np.array(coefs)
+
+custom_colors = ["#3F7B5D", "#79BDA8", "#B7DFD3"]
+
+# Lasso TracePlot
+plt.figure(figsize=(8, 6))
+for i in range(n_features):
+    plt.plot(lambdas, coefs[:, i], color=custom_colors[i], label=f'Współczynnik β{i+1}')
+plt.xscale('log')
+plt.xlabel('Lambda (λ)')
+plt.ylabel('Wartość współczynnika β')
+plt.title('Lasso Trace Plot')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(os.path.join(folder, "3_20_LassoTracePlot.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+# Rysunek 3.22.
+
+X = df[['Powierzchnia', 'LiczbaPokoi', 'Wiek', 'OdlOdCentrum']]
+X_with_const = sm.add_constant(X)
+y = df['Cena']
+model = sm.OLS(y, X_with_const).fit()
+
+# Odległosć Cook'a
+influence = model.get_influence()
+cooks_d = influence.cooks_distance[0]
+
+threshold = 4 / len(df)
+outlier_indices = np.where(cooks_d > threshold)[0]
+
+# Wykres odległości Cook'a dla 4/n dzie n to liczba obserwacji (u mnie 100 - przykładowe dane)
+plt.figure(figsize=(10, 6))
+plt.stem(np.arange(len(cooks_d)), cooks_d, markerfmt=" ", basefmt=" ", linefmt='green')
+plt.axhline(y=threshold, color='red', linestyle='--', label=f'Próg: {threshold:.4f}')
+plt.xlabel('Numer obserwacji')
+plt.ylabel('Odległość Cooka')
+plt.legend()
+plt.grid(True)
+plt.savefig(os.path.join(folder, "3_22_OdlegloscCooka.png"), dpi=300, bbox_inches='tight')
+plt.show()
+
+outliers_df = df.iloc[outlier_indices][['#', 'Powierzchnia', 'LiczbaPokoi', 'Wiek', 'OdlOdCentrum', 'Cena']].copy()
+outliers_df
+
