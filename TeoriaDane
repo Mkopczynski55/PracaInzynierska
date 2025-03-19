@@ -1,0 +1,81 @@
+## Kod zamieszczony w tym pliku służy generowaniu przykładowego zbioru danych, który posłużył do pakrtycznego pokazania zastosowania teoretycznych zagadnień / problemów poruszanych w 3 rozdziale pracy - "Definicje i przykłady". ##
+## Dane zostały przyygotowane generycznie, nie pochodzą z rzeczywistego zbioru danych. Zależności, które zostały zaimplementowane w danyuch przykładowych, zostały zaimplentowane celowo, aby móc w praktyce zilustrować zagadnienie teoretyczne." ##
+
+import numpy as np
+import pandas as pd
+
+# Ustawienie losowości na poziomie seed(123) dla uzyskania powtarzalności wyników.
+np.random.seed(123)
+
+# Tworzony przykładowy zbiór danych ma mieć 100 rekordów. 1 rekord = 1 nieruchomość opisywana przez jej cechy.
+n = 100
+
+# Generowanie zmiennych objaśniających
+
+powierzchnia = np.random.normal(loc=70, scale=15, size=n) Generuje n losowych wartości z rozkładu normalnego (Gaussa)
+powierzchnia = np.clip(powierzchnia, 30, 150)
+
+# Liczba pokoi silnie skorelowana z powierzchnią
+liczba_pokoi = np.round(powierzchnia / 20 + np.random.normal(0, 0.3, n)).astype(int)
+liczba_pokoi = np.clip(liczba_pokoi, 1, 6)
+
+# Lokalizacja kategorialna (Centrum, Śródmieście, Peryferia) z odpowiednimi prawdopodobieństwami
+lokalizacja = np.random.choice(['Centrum', 'Śródmieście', 'Peryferia'], size=n, p=[0.4, 0.4, 0.2])
+
+# Wiek nieruchomości zależny od lokalizacji
+
+wiek = []
+odleglosc = []
+for lok in lokalizacja:
+
+    if lok == 'Centrum':
+
+        wiek.append(np.random.randint(0, 30))          # nowe nieruchomości
+        odleglosc.append(np.random.uniform(0.1, 1.5))  # nowe nieruchomości blisko centrum
+
+    elif lok == 'Śródmieście':
+
+        wiek.append(np.random.randint(15, 50))         
+        odleglosc.append(np.random.uniform(1.5, 5.0))
+
+    else:  # Peryferia
+
+        wiek.append(np.random.randint(30, 80))         
+        odleglosc.append(np.random.uniform(5.0, 15.0))  # nieruchomości na peryferiach są daleko od centrum
+
+# Zaokrąglenie wartości zmiennych objaśniających
+
+powierzchnia = np.round(powierzchnia).astype(int)
+odleglosc = np.round(odleglosc, 2)
+
+numer = np.arange(1, n + 1)
+
+df = pd.DataFrame({
+    '#': numer,
+    'Powierzchnia': powierzchnia,
+    'LiczbaPokoi': liczba_pokoi,
+    'Lokalizacja': lokalizacja,
+    'Wiek': wiek,
+    'OdlOdCentrum': odleglosc
+})
+
+# Cena za m2 zależna od lokalizacji
+
+cena_za_m2 = np.where(df['Lokalizacja'] == 'Centrum', 12000,
+                      np.where(df['Lokalizacja'] == 'Śródmieście', 9000, 6000))
+
+# Cena bazowa: cena_za_m2 * powierzchnia
+
+# Negatywny wpływ wieku i odległości od centrum na cenę + szum losowy (urealistycznienie obserwacji)
+
+szum = np.random.normal(0, 20000, size=n)  # szum losowy
+
+cena = cena_za_m2 * df['Powierzchnia'] - df['Wiek'] * 1000 - df['OdległośćOdCentrum'] * 5000 + szum
+cena = np.maximum(cena, 100000)  # cena minimalna
+
+# Zaokrąglenie ceny do pełnych setek - realistycznie zmiany groszowe nie mają żadnego znaczenia.
+
+cena = (cena // 100) * 100
+df['Cena'] = cena.astype(int)
+
+df.head()
