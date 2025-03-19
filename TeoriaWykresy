@@ -1,4 +1,26 @@
 ## Plik zawiera kod źródłowy dla wszystkich wygenerowanych w Pythonie wykresów na bazie danych ze zbioru danych przykładowych, których generowanie omówiono w pliku 'https://github.com/Mkopczynski55/PracaInzynierska/blob/main/TeoriaDane'. ""
+##############################################################################
+# Bibioteki wykorzystywane do generowania wykresów do zagadnień teoretycznych
+import numpy as np
+import pandas as pd
+import os
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
+from sklearn.cluster import KMeans
+
+import statsmodels.api as sm
+from sklearn.linear_model import Ridge, Lasso
+
+import scipy.stats as stats
+from scipy.stats import t
+from statsmodels.stats.diagnostic import het_breuschpagan
+from scipy.optimize import curve_fit
+
+from itertools import combinations
+
+##############################################################################
 
 # DEKLARACJA FOLDERU ZAPISU - przy kopiowaniu należy wskazać własne ścieżki
 folder = "Praca inżynierska Charts"
